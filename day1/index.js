@@ -42,6 +42,12 @@ app.post("/add_todo", async (req, res) => {
 app.get("/get_todo/:id", async (req, res) => {
   let id = req.params.id;
   const todo = await Todo.findById(id).select("-__v");
+  if (!todo)
+    return res.status(404).json({
+      ok: false,
+      message: "Todo not found",
+    });
+
   res.status(200).json({
     ok: true,
     todo,
@@ -79,7 +85,7 @@ app.delete("/delete_todo/:id", async (req, res) => {
   });
 });
 
-const PORT = 3000;
+const PORT = 80;
 app.listen(PORT, () => {
   console.log(`server is running on port ${PORT}`);
 });
