@@ -1,51 +1,81 @@
 const express = require("express");
+const { model, Schema, connect } = require("mongoose");
 
 const app = express();
+// ---------- MONGODB CONNECTION -------------
+const uri =
+  "mongodb+srv://mlhlm786:mlhlm786@workshop.vzgbv.mongodb.net/Todo?retryWrites=true&w=majority";
+
+connect(uri, {
+  useNewUrlParser: true,
+  useUnifiedTopology: true,
+})
+  .then(() => console.log("Database connected!"))
+  .catch((err) => console.log(err));
+
+// ----------DEFINE TODO SCHEMA----------
+
+const todoSchema = new Schema({
+  text: String,
+});
+
+// -------------COMPILE TODO MODEL-------------
+
+const Todo = model("Todo", todoSchema);
+
+// -----------------BODY PARSER MIDDLEWARE-----------------
 
 app.use(express.json());
 
-let todo = [];
+// -----------------ROUTES-----------------
 
-app.post("/add_todo", (req, res) => {
-  const id = todo.length;
+app.post("/add_todo", async (req, res) => {
   const { text } = req.body;
-  let t = { id: id, text: text };
-  todo.push(t);
-  res.status(200).json(t);
-});
-
-app.get("/get_todo/:id", (req, res) => {
-  let id = req.params.id;
-  for (let t of todo) {
-    if (t.id == id) {
-      return res.status(200).json({
-        todo: t,
-      });
-    }
-  }
-});
-
-app.get("/get_all_todo", (req, res) => {
-  res.status(200).json(todo);
-});
-
-app.post("/update_todo/:id", (req, res) => {
-  let id = req.params.id;
-  const { text } = req.body;
-
-  for (let t of todo) {
-    if (t.id == id) {
-      todo[t.id].text = text;
-      return res.status(200).json(todo[t.id]);
-    }
-  }
-});
-
-app.post("/delete_todo/:id", (req, res) => {
-  let id = req.params.id;
-  todo = todo.filter((t) => t.id != id);
+  const todo = new Todo({ text: text });
+  await todo.save();
   res.status(200).json({
+    ok: true,
     todo,
+  });
+});
+
+app.get("/get_todo/:id", async (req, res) => {
+  let id = req.params.id;
+  const todo = await Todo.findById(id).select("-__v");
+  res.status(200).json({
+    ok: true,
+    todo,
+  });
+});
+
+app.get("/get_all_todo", async (req, res) => {
+  const todos = await Todo.find().select("-__v");
+  res.status(200).json({
+    ok: true,
+    todos,
+  });
+});
+
+app.put("/update_todo/:id", async (req, res) => {
+  let id = req.params.id;
+  const { text } = req.body;
+  const todo = await Todo.findByIdAndUpdate(id, { text: text }).select("-__v");
+  res.status(200).json({
+    ok: true,
+    todo,
+  });
+});
+
+app.delete("/delete_todo/:id", async (req, res) => {
+  let todo = await Todo.findById(req.params.id);
+  if (!todo)
+    return res.status(404).json({
+      ok: false,
+      message: "Todo not found",
+    });
+  await todo.remove();
+  res.status(200).json({
+    ok: true,
   });
 });
 
